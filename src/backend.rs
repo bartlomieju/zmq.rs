@@ -50,7 +50,7 @@ impl GenericSocketBackend {
         loop {
             let next_peer_id = match self.round_robin.pop() {
                 Ok(peer) => peer,
-                Err(_) => match message {
+                Err(_) => match message.clone() {
                     Message::Greeting(_) => panic!("Sending greeting is not supported"),
                     Message::Command(_) => panic!("Sending commands is not supported"),
                     Message::Message(m) => {
@@ -63,14 +63,15 @@ impl GenericSocketBackend {
             };
             match self.peers.get_mut(&next_peer_id) {
                 Some(mut peer) => {
-                    let send_result = peer.send_queue.send(message).await;
+                    let send_result = peer.send_queue.send(message.clone()).await;
                     match send_result {
                         Ok(()) => {
                             self.round_robin.push(next_peer_id.clone());
                             return Ok(next_peer_id);
                         }
-                        Err(_) => {
-                            panic!("Don't know how to handle this now");
+                        Err(e) => {
+                            eprintln!("error in round robin {:#?}", e);
+                            // panic!("Don't know how to handle this now");
                         }
                     };
                 }
